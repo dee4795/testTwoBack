@@ -11,7 +11,15 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Middleware
-app.use(cors());
+
+
+app.use(cors({
+    origin: process.env.ALLOWED_ORIGINS?.split(','),
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
+  }));
+
+
 app.use(express.json()); // Use built-in middleware for JSON
 app.use(express.static(path.join(__dirname, 'public')));
 
