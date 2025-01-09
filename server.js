@@ -9,23 +9,19 @@ const User = require('./models/user.model');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware
-app.use(cors({
-    origin: process.env.ALLOWED_ORIGINS?.split(','),
+// Updated CORS configuration
+const corsOptions = {
+    origin: ['https://testtwo-delta.vercel.app', 'http://localhost:4200'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
-}));
-app.options('*', cors()); // Handle preflight requests
-app.use(express.json()); // Use built-in middleware for JSON
+    optionsSuccessStatus: 200
+};
+
+// Apply CORS with options
+app.use(cors(corsOptions));
+app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
-
-// Welcome Route
-app.get('/', (req, res) => {
-    res.send('Welcome to my backend API!');
-});
-
-// Logging Allowed Origins
-console.log('Allowed Origins:', process.env.ALLOWED_ORIGINS?.split(','));
 
 // MongoDB Connection
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/restaurantDB';
@@ -60,7 +56,11 @@ app.get('/api/restaurants', async (req, res) => {
 
 app.put('/api/restaurants/:id', async (req, res) => {
     try {
-        const restaurant = await Restaurant.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        const restaurant = await Restaurant.findByIdAndUpdate(
+            req.params.id, 
+            req.body,
+            { new: true }
+        );
         res.json(restaurant);
     } catch (error) {
         res.status(400).json({ message: error.message });
@@ -105,10 +105,8 @@ app.post('/api/login', async (req, res) => {
 });
 
 if (process.env.NODE_ENV === 'production') {
-    // Serve static files
     app.use(express.static(path.join(__dirname, '../frontend/dist')));
     
-    // Handle SPA
     app.get('*', (req, res) => {
         res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
     });
