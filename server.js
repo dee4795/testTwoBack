@@ -12,6 +12,10 @@ const PORT = process.env.PORT || 3000;
 
 // Middleware
 
+app.get('/', (req, res) => {
+    res.send('Welcome to my backend API!');
+  });
+
 
 app.use(cors({
     origin: process.env.ALLOWED_ORIGINS?.split(','),
