@@ -11,7 +11,7 @@ const PORT = process.env.PORT || 3000;
 
 // Updated CORS configuration
 const corsOptions = {
-    origin: ['https://testtwo-ow68riy8h-deepuks-projects.vercel.app', 'http://localhost:4200'],
+    origin: ['https://testtwo-rho.vercel.app/', 'http://localhost:4200'],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true,
