@@ -3,7 +3,6 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const path = require('path');
-// No need for body-parser module as of Express 4.16.0
 const Restaurant = require('./models/restaurant.model');
 const User = require('./models/user.model');
 
@@ -11,21 +10,22 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Middleware
-
-app.get('/', (req, res) => {
-    res.send('Welcome to my backend API!');
-  });
-
-
 app.use(cors({
     origin: process.env.ALLOWED_ORIGINS?.split(','),
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
-  }));
-
-
+}));
+app.options('*', cors()); // Handle preflight requests
 app.use(express.json()); // Use built-in middleware for JSON
 app.use(express.static(path.join(__dirname, 'public')));
+
+// Welcome Route
+app.get('/', (req, res) => {
+    res.send('Welcome to my backend API!');
+});
+
+// Logging Allowed Origins
+console.log('Allowed Origins:', process.env.ALLOWED_ORIGINS?.split(','));
 
 // MongoDB Connection
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/restaurantDB';
@@ -60,11 +60,7 @@ app.get('/api/restaurants', async (req, res) => {
 
 app.put('/api/restaurants/:id', async (req, res) => {
     try {
-        const restaurant = await Restaurant.findByIdAndUpdate(
-            req.params.id, 
-            req.body,
-            { new: true }
-        );
+        const restaurant = await Restaurant.findByIdAndUpdate(req.params.id, req.body, { new: true });
         res.json(restaurant);
     } catch (error) {
         res.status(400).json({ message: error.message });
@@ -107,7 +103,6 @@ app.post('/api/login', async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 });
-
 
 if (process.env.NODE_ENV === 'production') {
     // Serve static files
