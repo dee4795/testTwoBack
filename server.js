@@ -3,20 +3,40 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const path = require('path');
+const jwt = require('jsonwebtoken');
 const Restaurant = require('./models/restaurant.model');
 const User = require('./models/user.model');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key'; // Better to use environment variable
 
-// Updated CORS configuration
+// Middleware to verify JWT token
+const verifyToken = (req, res, next) => {
+    const bearerHeader = req.headers['authorization'];
+    
+    if (!bearerHeader) {
+        return res.status(401).json({ message: 'No token provided' });
+    }
+
+    const token = bearerHeader.split(' ')[1];
+    
+    try {
+        const decoded = jwt.verify(token, JWT_SECRET);
+        req.user = decoded;
+        next();
+    } catch (error) {
+        return res.status(401).json({ message: 'Invalid token' });
+    }
+};
+
+// CORS configuration
 const corsOptions = {
     origin: [
         'https://testtwo-dvn9el6vk-deepuks-projects.vercel.app',
         'https://testtwo-rho.vercel.app',
         'https://testtwo-dee4795-deepuks-projects.vercel.app',
         'https://testtwo-deepuks-projects.vercel.app',
-
         'http://localhost:4200'
     ],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -25,10 +45,8 @@ const corsOptions = {
     optionsSuccessStatus: 200
 };
 
-// Apply CORS with options
 app.use(cors(corsOptions));
-app.options('*', cors(corsOptions)); // Handle preflight requests
-
+app.options('*', cors(corsOptions));
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -43,8 +61,8 @@ mongoose.connect(MONGODB_URI, {
     console.log('Error connecting to MongoDB:', error);
 });
 
-// Restaurant Routes
-app.post('/api/restaurants', async (req, res) => {
+// Protected Restaurant Routes
+app.post('/api/restaurants', verifyToken, async (req, res) => {
     try {
         const restaurant = new Restaurant(req.body);
         await restaurant.save();
@@ -54,7 +72,7 @@ app.post('/api/restaurants', async (req, res) => {
     }
 });
 
-app.get('/api/restaurants', async (req, res) => {
+app.get('/api/restaurants', verifyToken, async (req, res) => {
     try {
         const restaurants = await Restaurant.find();
         res.json(restaurants);
@@ -63,7 +81,7 @@ app.get('/api/restaurants', async (req, res) => {
     }
 });
 
-app.put('/api/restaurants/:id', async (req, res) => {
+app.put('/api/restaurants/:id', verifyToken, async (req, res) => {
     try {
         const restaurant = await Restaurant.findByIdAndUpdate(
             req.params.id, 
@@ -76,7 +94,7 @@ app.put('/api/restaurants/:id', async (req, res) => {
     }
 });
 
-app.delete('/api/restaurants/:id', async (req, res) => {
+app.delete('/api/restaurants/:id', verifyToken, async (req, res) => {
     try {
         await Restaurant.findByIdAndDelete(req.params.id);
         res.json({ message: 'Restaurant deleted successfully' });
@@ -88,9 +106,25 @@ app.delete('/api/restaurants/:id', async (req, res) => {
 // Authentication Routes
 app.post('/api/signup', async (req, res) => {
     try {
+        const existingUser = await User.findOne({ email: req.body.email });
+        if (existingUser) {
+            return res.status(400).json({ message: 'Email already exists' });
+        }
+
         const user = new User(req.body);
         await user.save();
-        res.status(201).json({ message: 'User registered successfully' });
+        
+        // Generate token for newly registered user
+        const token = jwt.sign(
+            { userId: user._id, email: user.email },
+            JWT_SECRET,
+            { expiresIn: '24h' }
+        );
+        
+        res.status(201).json({ 
+            message: 'User registered successfully',
+            token: token
+        });
     } catch (error) {
         res.status(400).json({ message: error.message });
     }
@@ -104,7 +138,17 @@ app.post('/api/login', async (req, res) => {
         });
         
         if (user) {
-            res.json({ message: 'Login successful' });
+            // Generate token
+            const token = jwt.sign(
+                { userId: user._id, email: user.email },
+                JWT_SECRET,
+                { expiresIn: '24h' }
+            );
+            
+            res.json({ 
+                message: 'Login successful',
+                token: token
+            });
         } else {
             res.status(401).json({ message: 'Invalid email or password' });
         }
